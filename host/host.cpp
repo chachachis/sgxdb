@@ -1,6 +1,7 @@
 // Copyright (c) Open Enclave SDK contributors.
 // Licensed under the MIT License.
 
+#define _CRT_SECURE_NO_WARNINGS
 #include <assert.h>
 #include <limits.h>
 #include <openenclave/host.h>
@@ -10,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <string>
 #include <vector>
 #include "../shared.h"
 
@@ -22,7 +24,75 @@ using namespace std;
 #define ENCRYPT_OPERATION true
 #define DECRYPT_OPERATION false
 
-oe_enclave_t* enclave = NULL;
+static oe_enclave_t* enclave = NULL;
+static string modelfile;
+static string seqfile;
+
+const char* DIRECTORY_OF_PARAMETERS = "C:/sgxdb/db/params/";
+
+/* create new "deepbind" class in enclave directory,
+add deepbind to cmakelists
+
+deepbind code:
+1. check + parse command line for file names
+2. malloc for model_id* 
+
+ */
+
+// host helper functions
+
+void trim_trailing_whitespace(char* str)
+{
+	int i = (int)strlen(str);
+	while (i > 0 && (str[i - 1] == '\n' || str[i - 1] == ' ' || str[i - 1] == '\t' || str[i - 1] == '\r'))
+		i--;
+	str[i] = '\0';
+}
+
+int get_num_hidden1(deepbind_model_t* model) { return model->has_avg_pooling ? model->num_detectors * 2 : model->num_detectors; }
+int get_num_hidden2(deepbind_model_t* model) { return model->num_hidden ? model->num_hidden : 1; }
+
+model_id_t str2id(char* str)
+{
+	model_id_t id = { 0, 0 };
+	char tmp[6];
+	if (!str) {
+		cout << "Invalid model id NULL";
+        exit(-1);
+    }
+	if (strlen(str) < 10 || str[0] != 'D' || str[6] != '.') {
+		cout << "Invalid model id \"\"; should be of form D#####.###" << str;
+        exit(-1);
+    }
+	memcpy(tmp, str + 1, 5); tmp[5] = '\0';
+	id.major = atoi(tmp);
+	id.minor = atoi(str + 7);
+	if (id.major <= 0 || id.minor <= 0) {
+        cout << "Invalid model id " << str << "; should be of form DXXXXX.YYY where XXXXX >= 1 and YYY >= 1";
+		exit(-1);
+    }
+    
+	return id;
+}
+
+void id2str(model_id_t id, char* dst)
+{
+	if (id.major <= 0 || id.minor <= 0) {
+		cout << "Invalid model id";
+        exit(-1);
+    }
+	sprintf(dst, "D%05d.%03d", id.major, id.minor);
+}
+
+void panic(const char* msg, ...)
+{
+	va_list va;
+	va_start(va, msg);
+	vprintf(msg, va);
+	va_end(va);
+	printf("\n");
+	exit(-1);
+}
 
 bool check_simulate_opt(int* argc, const char* argv[])
 {
@@ -378,8 +448,199 @@ exit:
     return ret;
 }
 
+// host calls from enclave
+
+int loadmodelids() {
+    // Parses model-ids-file and adds each id to enclave
+    char buffer[1024];
+    model_id_t id;
+    char* filename = &modelfile[0];
+    FILE* file = fopen(filename, "r");
+    oe_result_t result;
+    int count = 0;
+
+    if (!file) {
+        cout << "couldnt call " << filename;
+        exit(-1);
+    }
+
+    result = ecall_initmodel(enclave);
+    if (result != OE_OK) {
+        cout << "Trouble initialising model" << endl;
+    }
+
+    while (fgets(buffer, 1024, file)) {
+        if (buffer[0] != '#') {
+            trim_trailing_whitespace(buffer);
+            id = str2id(buffer);
+            result = ecall_addIDtomodel(enclave, id.major, id.minor);
+            if (result != OE_OK) {
+                cout << "Trouble adding id to model via ecall ";
+                exit(-1);
+            }
+            count++;
+        }
+    }
+    return count;
+}
+
+void load_model_paramlist(FILE* file, char* param_file, const char* param_name, float** _dst, int num_params)
+{
+	int i;
+	char buffer[64];
+	float* dst = 0;
+	*_dst = 0;
+	strcpy(buffer, param_name);
+	if (num_params > 0) {
+		float* dst = (float*)malloc(sizeof(float) * num_params);
+		strcat(buffer, " = %f");
+		if (fscanf(file, buffer, &dst[0]) != 1)
+			panic("Failed parsing %s in file %s", param_file, param_name);
+		for (i = 1; i < num_params; ++i)
+			if (fscanf(file, ",%f", &dst[i]) != 1)
+				panic("Failed parsing %s in file %s", param_file, param_name);
+		fscanf(file, "\n"); // eat up the carriage return
+		*_dst = dst;
+	}
+	else {
+		strcat(buffer, " = ");
+		fscanf(file, buffer); // eat up the line
+	}
+}
+
+deepbind_model_t* load_model(model_id_t id)
+{
+	char param_file[512];
+	int major_version = 0;
+	int minor_version = 0;
+	deepbind_model_t* model = 0;
+	FILE* file = 0;
+
+	/* Find path to file*/
+	strcpy(param_file, DIRECTORY_OF_PARAMETERS);
+	id2str(id, param_file + strlen(param_file));
+	strcat(param_file, ".txt");
+    // cout << "param_file to open = " << param_file << endl;
+
+	/* Open the file and parse each line */
+	file = fopen(param_file, "r");
+	if (!file)
+		panic("Could not open param file %s.", param_file);
+
+	if (fscanf(file, "# deepbind %d.%d\n", &major_version, &minor_version) != 2)
+		panic("Expected parameter file to start with \"# deepbind 0.1\"");
+	if (major_version != 0 || minor_version != 1)
+		panic("Param file is for deepbind %d.%d, not 0.1", major_version, minor_version);
+
+	model = (deepbind_model_t*)malloc(sizeof(deepbind_model_t));
+	model->id = id;
+
+	if (fscanf(file, "reverse_complement = %d\n", &model->reverse_complement) != 1) panic("Failed parsing reverse_complement in %s", param_file);
+	if (fscanf(file, "num_detectors = %d\n", &model->num_detectors) != 1)      panic("Failed parsing num_detectors in %s", param_file);
+	if (fscanf(file, "detector_len = %d\n", &model->detector_len) != 1)       panic("Failed parsing detector_len in %s", param_file);
+	if (fscanf(file, "has_avg_pooling = %d\n", &model->has_avg_pooling) != 1)    panic("Failed parsing has_avg_pooling in %s", param_file);
+	if (fscanf(file, "num_hidden = %d\n", &model->num_hidden) != 1)         panic("Failed parsing num_hidden in %s", param_file);
+
+	load_model_paramlist(file, param_file, "detectors", &model->detectors, model->num_detectors * model->detector_len * 4);
+	load_model_paramlist(file, param_file, "thresholds", &model->thresholds, model->num_detectors);
+	load_model_paramlist(file, param_file, "weights1", &model->weights1, get_num_hidden1(model) * get_num_hidden2(model));
+	load_model_paramlist(file, param_file, "biases1", &model->biases1, get_num_hidden2(model));
+	load_model_paramlist(file, param_file, "weights2", &model->weights2, model->num_hidden ? model->num_hidden : 0);
+	load_model_paramlist(file, param_file, "biases2", &model->biases2, model->num_hidden ? 1 : 0);
+
+	fclose(file);
+	return model;
+}
+
+/* Loads model parameters to deepbind model in enclave.
+    Also prints headers on stdout.  */
+void loadmodelparams(int modelcount) {
+    model_id_t modelid;
+    deepbind_model_t* model;
+    oe_result_t result;
+
+    cout << "Host: Loading parameters onto enclave model.\n";
+
+    for (int i = 0; i < modelcount; i++) {
+        result = ecall_getdbmodelid(enclave, &modelid, (size_t) i);
+        model = load_model(modelid);
+        result = ecall_loadparams(enclave, *model);
+        if (result != OE_OK) {
+            cout << "error on ecall_loadparams " << i << "\n";
+            exit(-1);
+        }
+        
+        if (i > 0) {
+            fputc('\t', stdout);
+        }
+        fprintf(stdout, "D%05d.%03d", modelid.major, modelid.minor);
+    }
+    fputc('\n', stdout);
+}
+
+void printscores(vector<float> scores) {
+    int i = 0;
+
+    for (vector<float>::iterator it = scores.begin(); it != scores.end(); it++) {
+        if (i > 0) {
+            fputc('\t', stdout);
+        }
+        fprintf(stdout, "%f", (double) *it);
+        i++;
+    }
+    fputc('\n', stdout);
+}
+
+void predictseqs(int num_models) {
+    // Parses sequences-file and calls enclave to obtain predictions
+
+    char buffer[1024]; // maximum length of sequences to predict
+    char* filename = &seqfile[0];
+    FILE* file = fopen(filename, "r");
+    oe_result_t result;
+    int lineindex = 0;
+
+    if (!file) {
+        cout << "error opening file " << filename;
+        exit(-1);
+    }
+    
+    while(fgets(buffer, 1024, file)) {
+        vector<float> scores;
+        trim_trailing_whitespace(buffer);
+        int bufferlen = strlen(buffer);
+        if(bufferlen > 0) {
+            size_t validseq = 0;
+            char* cptr = new char;
+            ecall_checkvalidseq(enclave, &validseq, buffer, bufferlen);
+            if (validseq != 0) {
+                cout << "Sequence on line " << lineindex << ", " << validseq << " is not valid.\n";
+                exit(-1);
+            }
+
+            for (int i = 0; i < num_models; i++) {
+                float score;
+                result = ecall_scanmodel(enclave, &score, (size_t) i, buffer, bufferlen, 0, 0);
+                model_id_t modelid;
+                result = ecall_getdbmodelid(enclave, &modelid, i);
+                scores.push_back(score);
+                if (result != OE_OK) {
+                    cout << "Result from ecall_scanmodel not ok";
+                    exit(-1);
+                }
+            }
+            printscores(scores);
+            lineindex++;
+        }
+    }
+
+}
+
 int main(int argc, const char* argv[])
 {
+    // int  window_size = 0;
+	// int  average_flag = 0;
+
     oe_result_t result;
     int ret = 0;
     const char* input_file = argv[1];
@@ -393,16 +654,16 @@ int main(int argc, const char* argv[])
     }
 
     cout << "Host: enter main" << endl;
-    if (argc != 3)
+    if (argc != 4)
     {
         cerr << "Usage: " << argv[0]
-             << " testfile enclave_image_path [ --simulate  ]" << endl;
+             << " model-ids-file sequences-file enclave_image_path [ --simulate  ]" << endl;
         return 1;
     }
 
-    cout << "Host: create enclave for image:" << argv[2] << endl;
+    cout << "Host: create enclave for image:" << argv[3] << endl;
     result = oe_create_fileencryptor_enclave(
-        argv[2], OE_ENCLAVE_TYPE_SGX, flags, NULL, 0, &enclave);
+        argv[3], OE_ENCLAVE_TYPE_SGX, flags, NULL, 0, &enclave);
     if (result != OE_OK)
     {
         cerr << "oe_create_fileencryptor_enclave() failed with " << argv[0]
@@ -410,6 +671,22 @@ int main(int argc, const char* argv[])
         ret = 1;
         goto exit;
     }
+
+    // Parse arguments and store model-ids-file in enclave's deepbind model
+    modelfile = string(argv[1]);
+    seqfile = string(argv[2]);
+    
+    int modelcount = loadmodelids();
+    model_id_t modelid;
+    oe_result_t getidresult;
+
+    loadmodelparams(modelcount);
+
+    // Parse sequences from sequences-file and predict for each in enclave
+    // predictseqs();
+    predictseqs(modelcount);
+
+    cout << "Host: Successfully scored sequences!" << endl;
 
     // encrypt a file
     cout << "Host: encrypting file:" << input_file

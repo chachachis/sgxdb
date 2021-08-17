@@ -25,4 +25,24 @@ typedef struct _encryption_header
     unsigned char salt[SALT_SIZE_IN_BYTES];
 } encryption_header_t;
 
+typedef struct {
+	int major;
+	int minor;
+} model_id_t;
+
+typedef struct {
+	model_id_t id;
+	int reverse_complement;
+	int num_detectors;
+	int detector_len;
+	int has_avg_pooling;
+	int num_hidden;
+	float* detectors;
+	float* thresholds;
+	float* weights1;
+	float* biases1;
+	float* weights2;
+	float* biases2;
+} deepbind_model_t;
+
 #endif /* _ARGS_H */

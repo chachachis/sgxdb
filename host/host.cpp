@@ -25,8 +25,7 @@ using namespace std;
 #define DECRYPT_OPERATION false
 
 static oe_enclave_t* enclave = NULL;
-static string modelfile;
-static string seqfile;
+static string operation;
 
 const char* DIRECTORY_OF_PARAMETERS = "C:/sgxdb/db/params/";
 
@@ -189,6 +188,7 @@ int encrypt_file(
     const char* input_file,
     const char* output_file)
 {
+    cout << "debug";
     oe_result_t result;
     int ret = 0;
     FILE* src_file = NULL;
@@ -448,19 +448,16 @@ exit:
     return ret;
 }
 
-// host calls from enclave
-
-int loadmodelids() {
+int loadmodelids(const char* modelfile) {
     // Parses model-ids-file and adds each id to enclave
     char buffer[1024];
     model_id_t id;
-    char* filename = &modelfile[0];
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(modelfile, "r");
     oe_result_t result;
     int count = 0;
 
     if (!file) {
-        cout << "couldnt call " << filename;
+        cout << "couldnt call " << modelfile;
         exit(-1);
     }
 
@@ -591,17 +588,16 @@ void printscores(vector<float> scores) {
     fputc('\n', stdout);
 }
 
-void predictseqs(int num_models) {
+void predictseqs(const char* seqfile, int num_models) {
     // Parses sequences-file and calls enclave to obtain predictions
 
     char buffer[1024]; // maximum length of sequences to predict
-    char* filename = &seqfile[0];
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(seqfile, "r");
     oe_result_t result;
     int lineindex = 0;
 
     if (!file) {
-        cout << "error opening file " << filename;
+        cout << "error opening file " << seqfile;
         exit(-1);
     }
     
@@ -636,6 +632,100 @@ void predictseqs(int num_models) {
 
 }
 
+void wrapup() {
+    cout << "Host: terminate the enclave" << endl;
+    cout << "Host: Sample completed successfully." << endl;
+    oe_terminate_enclave(enclave);
+}
+
+void printusage(const char* prog) {
+    cerr << "Usage: " << prog 
+        << " model-ids-file sequences-file enclave_image_path [ --simulate  ]" << endl;
+}
+
+void run_predict(const char* modelfile, const char* seqfile) {
+    // Parse arguments and store model-ids-file in enclave's deepbind model
+    int modelcount = loadmodelids(modelfile);
+    model_id_t modelid;
+    oe_result_t getidresult;
+
+    loadmodelparams(modelcount);
+
+    // Parse sequences from sequences-file and predict for each in enclave
+    // predictseqs();
+    predictseqs(seqfile, modelcount);
+
+    cout << "Host: Successfully scored sequences!" << endl;
+}
+
+void run_encrypt(const char* infile, const char* outfile, const char* password) {
+    int ret = 0;
+    cout << "Host: encrypting file:" << infile
+         << " -> file:" << outfile << endl;
+    ret = encrypt_file(
+        ENCRYPT_OPERATION, password, infile, outfile);
+    if (ret != 0)
+    {
+        cerr << "Host: processFile(ENCRYPT_OPERATION) failed with " << ret
+             << endl;
+        wrapup();
+        exit(-1);
+    }
+
+    // Make sure the encryption was doing something. Input and encrypted files
+    // are not equal
+    cout << "Host: compared file:" << outfile
+         << " to file:" << infile << endl;
+    ret = compare_2_files(infile, outfile);
+    if (ret == 0)
+    {
+        cerr << "Host: checking failed! " << infile
+             << "'s contents are not supposed to be same as " << outfile
+             << endl;
+        wrapup();
+        exit(-1);
+    }
+    cout << "Host: " << infile << " is NOT equal to " << outfile
+         << "as expected" << endl;
+    cout << "Host: encryption was done successfully" << endl;
+
+}
+
+void run_decrypt(const char* modelfile, const char* seqfile, const char* password) {
+    // Decrypt a file
+    cout << "Host: decrypting file:" << modelfile
+         << " to file:" << seqfile << password << endl;
+
+    // ret = encrypt_file(
+    //         DECRYPT_OPERATION,
+    //         argv[4],
+    //         seqfile,
+    // )
+    // ret = encrypt_file(
+    //     DECRYPT_OPERATION,
+    //     argv[4],
+    //     encrypted_file,
+    //     decrypted_file);
+    /*if (ret != 0)
+    {
+        cerr << "Host: processFile(DECRYPT_OPERATION) failed with " << ret
+             << endl;
+        wrapup();
+        exit(-1);
+    }
+    cout << "Host: compared file:" << encrypted_file
+         << " to file:" << decrypted_file << endl;
+    ret = compare_2_files(input_file, decrypted_file);
+    if (ret != 0)
+    {
+        cerr << "Host: checking failed! " << input_file
+             << "'s is supposed to be same as " << decrypted_file << endl;
+        wrapup();
+        exit(-1);
+    }
+    cout << "Host: " << input_file << " is equal to " << decrypted_file << endl;    */
+}
+
 int main(int argc, const char* argv[])
 {
     // int  window_size = 0;
@@ -643,7 +733,7 @@ int main(int argc, const char* argv[])
 
     oe_result_t result;
     int ret = 0;
-    const char* input_file = argv[1];
+    const char* input_file = argv[3];
     const char* encrypted_file = "./out.encrypted";
     const char* decrypted_file = "./out.decrypted";
     uint32_t flags = OE_ENCLAVE_FLAG_DEBUG;
@@ -654,97 +744,53 @@ int main(int argc, const char* argv[])
     }
 
     cout << "Host: enter main" << endl;
-    if (argc != 4)
-    {
-        cerr << "Usage: " << argv[0]
-             << " model-ids-file sequences-file enclave_image_path [ --simulate  ]" << endl;
-        return 1;
+    operation = string(argv[1]);
+    
+    if (operation.compare("decrypt-predict") == 0 || operation.compare("encrypt") == 0) {
+        if (argc != 6) {
+            printusage(argv[0]);
+        }
+    } else if (operation.compare("predict") == 0) {
+        if (argc != 5) {
+            printusage(argv[0]);
+        }
+    } else {
+        printusage(argv[0]);
     }
+    
+    const char* file1 = argv[2]; // input file for encryption, model ids file for prediction
+    const char* file2 = argv[3]; // output path for encryption, sequences file for prediction
+    // if operation includes decryption, both files will be checked for ".encrypted" extension to determine if encrypted
 
-    cout << "Host: create enclave for image:" << argv[3] << endl;
+    cout << "Host: creating enclave" << endl;
     result = oe_create_fileencryptor_enclave(
-        argv[3], OE_ENCLAVE_TYPE_SGX, flags, NULL, 0, &enclave);
+        argv[4], OE_ENCLAVE_TYPE_SGX, flags, NULL, 0, &enclave);
     if (result != OE_OK)
     {
         cerr << "oe_create_fileencryptor_enclave() failed with " << argv[0]
              << " " << result << endl;
-        ret = 1;
-        goto exit;
+        wrapup();
+        return 1;
     }
-
-    // Parse arguments and store model-ids-file in enclave's deepbind model
-    modelfile = string(argv[1]);
-    seqfile = string(argv[2]);
     
-    int modelcount = loadmodelids();
-    model_id_t modelid;
-    oe_result_t getidresult;
-
-    loadmodelparams(modelcount);
-
-    // Parse sequences from sequences-file and predict for each in enclave
-    // predictseqs();
-    predictseqs(modelcount);
-
-    cout << "Host: Successfully scored sequences!" << endl;
-
-    // encrypt a file
-    cout << "Host: encrypting file:" << input_file
-         << " -> file:" << encrypted_file << endl;
-    ret = encrypt_file(
-        ENCRYPT_OPERATION, "anyPasswordYouLike", input_file, encrypted_file);
-    if (ret != 0)
-    {
-        cerr << "Host: processFile(ENCRYPT_OPERATION) failed with " << ret
-             << endl;
-        goto exit;
+    if (operation.compare("predict") == 0) {
+        run_predict(file1, file2);
+        return 0;
     }
 
-    // Make sure the encryption was doing something. Input and encrypted files
-    // are not equal
-    cout << "Host: compared file:" << encrypted_file
-         << " to file:" << decrypted_file << endl;
-    ret = compare_2_files(input_file, encrypted_file);
-    if (ret == 0)
-    {
-        cerr << "Host: checking failed! " << input_file
-             << "'s contents are not supposed to be same as " << encrypted_file
-             << endl;
-        goto exit;
+    if (operation.compare("encrypt") == 0) {
+        run_encrypt(file1, file2, argv[5]);
+        return 0;
     }
-    cout << "Host: " << input_file << " is NOT equal to " << decrypted_file
-         << "as expected" << endl;
-    cout << "Host: encryption was done successfully" << endl;
 
-    // Decrypt a file
-    cout << "Host: decrypting file:" << encrypted_file
-         << " to file:" << decrypted_file << endl;
-
-    ret = encrypt_file(
-        DECRYPT_OPERATION,
-        "anyPasswordYouLike",
-        encrypted_file,
-        decrypted_file);
-    if (ret != 0)
-    {
-        cerr << "Host: processFile(DECRYPT_OPERATION) failed with " << ret
-             << endl;
-        goto exit;
+    if (operation.compare("decrypt-predict") == 0) {
+        run_decrypt(file1, file2, argv[5]);
+        return 0;
     }
-    cout << "Host: compared file:" << encrypted_file
-         << " to file:" << decrypted_file << endl;
-    ret = compare_2_files(input_file, decrypted_file);
-    if (ret != 0)
-    {
-        cerr << "Host: checking failed! " << input_file
-             << "'s is supposed to be same as " << decrypted_file << endl;
-        goto exit;
-    }
-    cout << "Host: " << input_file << " is equal to " << decrypted_file << endl;
+    
+    cout << "Invalid command\n";
+    printusage(argv[0]);
+    wrapup();
+    return 1;
 
-exit:
-    cout << "Host: terminate the enclave" << endl;
-    cout << "Host: Sample completed successfully." << endl;
-    oe_terminate_enclave(enclave);
-    return ret;
 }

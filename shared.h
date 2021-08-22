@@ -9,6 +9,7 @@
 #define ENCRYPTION_KEY_SIZE_IN_BYTES (ENCRYPTION_KEY_SIZE / 8)
 #define IV_SIZE 16 // determined by AES256-CBC
 #define SALT_SIZE_IN_BYTES IV_SIZE
+#define MAX_SEQ_SIZE 1024
 
 // encryption_header_t contains encryption metadata used for decryption
 // file_data_size: this is the size of the data in an input file, excluding the

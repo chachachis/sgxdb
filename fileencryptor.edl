@@ -20,23 +20,30 @@ enclave {
 
         public void close_encryptor();
 
-        public size_t ecall_checkvalidseq([in, count=seqlen] char* seq, size_t seqlen);
+        public size_t ecall_checkvalidseq([in, count=seqlen] unsigned char* seq, size_t seqlen);
         public void ecall_addIDtomodel(int major, int minor);
         public model_id_t ecall_getdbmodelid(size_t index);
         public void ecall_loadparams(deepbind_model_t model);
         public void ecall_initmodel();
         public float ecall_scanmodel(size_t modelindex, 
-						char* seq, 
+						[in, count=seqlen] unsigned char* seq, 
 						size_t seqlen,
 						size_t window_size,
 						int average_flag);
         
+        
+         public int ecall_decryptpredict([in, count=size] unsigned char* inbuff,
+                                        [in, count=size] unsigned char* outbuff,
+                                         size_t size,
+                                         bool eof,
+                                         size_t paddingsize);
 
     };
 
-    //untrusted {
-    //    no untrusted functions in this sample
-    //};
+    untrusted {
+        void hcall_printscores([in, out, count=modelcount] float* scores,
+                                size_t modelcount);
+    };
 };
 
 

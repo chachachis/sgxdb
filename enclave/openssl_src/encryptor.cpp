@@ -108,7 +108,6 @@ exit:
 }
 
 int ecall_dispatcher::encrypt_block(
-    bool encrypt,
     unsigned char* input_buffer,
     unsigned char* output_buffer,
     size_t size)
@@ -117,8 +116,7 @@ int ecall_dispatcher::encrypt_block(
     int output_data_size = 0;
     int last_cipher_block_length = 0;
 
-    if (encrypt)
-    {
+
         if (!(ret = EVP_EncryptUpdate(
                   m_aescontext->ctx,
                   output_buffer,
@@ -138,33 +136,44 @@ int ecall_dispatcher::encrypt_block(
             TRACE_ENCLAVE("EVP_EncryptFinal_ex failed with returncode %d", ret);
             goto exit;
         }
-    }
-    else
-    {
-        if (!(ret = EVP_DecryptUpdate(
-                  m_aescontext->ctx,
-                  output_buffer,
-                  &output_data_size,
-                  input_buffer,
-                  size)))
-        {
-            TRACE_ENCLAVE("EVP_DecryptUpdate failed with returncode %d", ret);
-            goto exit;
-        }
-
-        if (!(ret = EVP_DecryptFinal_ex(
-                  m_aescontext->ctx,
-                  output_buffer + output_data_size,
-                  &last_cipher_block_length)))
-        {
-            TRACE_ENCLAVE("EVP_DecryptFinal_ex failed with returncode %d", ret);
-            goto exit;
-        }
-    }
 
     ret = 0;
 exit:
     return ret;
+}
+
+int ecall_dispatcher::decrypt_block(
+    unsigned char* input_buffer,
+    unsigned char* output_buffer,
+    size_t size) {
+    int ret = 1;
+    int output_data_size = 0;
+    int last_cipher_block_length = 0;
+
+    if (!(ret = EVP_DecryptUpdate(
+                m_aescontext->ctx,
+                output_buffer,
+                &output_data_size,
+                input_buffer,
+                size)))
+    {
+        TRACE_ENCLAVE("EVP_DecryptUpdate failed with returncode %d", ret);
+        goto exit;
+    }
+
+    if (!(ret = EVP_DecryptFinal_ex(
+                m_aescontext->ctx,
+                output_buffer + output_data_size,
+                &last_cipher_block_length)))
+    {
+        TRACE_ENCLAVE("EVP_DecryptFinal_ex failed with returncode %d", ret);
+        goto exit;
+    }
+    ret = 0;
+
+exit:
+    return ret;
+
 }
 
 void ecall_dispatcher::close()

@@ -18,12 +18,16 @@ deepbind_model_t deepbind::getModel(size_t index) {
     return models.at(index);
 }
 
+size_t deepbind::getModelCount() {
+    return models.size();
+}
+
 /* The base2index table is used to:
    Convert chars 'A','C','G','T'/'U' to integers 0,1,2,3 respectively.
    Convert char 'N' to UNKNOWN_BASE.
    Convert anything else to INVALID_BASE. */
 
-int deepbind::base2index(char c)
+int deepbind::base2index(unsigned char c)
 {
 
     switch(c) {
@@ -73,14 +77,14 @@ void deepbind::init_base2comp_table()
 
 
 /* Reverse complement a string in-place */
-void deepbind::reverse_complement(char* seq, size_t seqlen)
+void deepbind::reverse_complement(unsigned char* seq, size_t seqlen)
 {
 	size_t i, j;
 	for (i = 0, j = seqlen - 1; i <= j; ++i, --j) {
 		unsigned char ci = (unsigned char)seq[i];
 		unsigned char cj = (unsigned char)seq[j];
-		seq[i] = base2comp[cj];
-		seq[j] = base2comp[ci];
+		seq[i] = (unsigned char) base2comp[cj];
+		seq[j] = (unsigned char) base2comp[ci];
 	}
 }
 
@@ -107,7 +111,7 @@ int deepbind::indexof_featuremap_coeff(int num_detector, int detector, int pos)
 }
 
 
-float deepbind::apply_model(deepbind_model_t* model, char* seq, int seq_len)
+float deepbind::apply_model(deepbind_model_t* model, unsigned char* seq, int seq_len)
 {
 	int n = seq_len;
 	int m = model->detector_len;
@@ -135,7 +139,7 @@ float deepbind::apply_model(deepbind_model_t* model, char* seq, int seq_len)
 			/* Convolve */
 			float featuremap_ik = 0;
 			for (j = 0; j < m; ++j) {
-				char c = ((i - m + 1) + j >= 0 && (i - m + 1) + j < n) ? seq[(i - m + 1) + j] : 'N';
+				unsigned char c = ((i - m + 1) + j >= 0 && (i - m + 1) + j < n) ? seq[(i - m + 1) + j] : 'N';
 				int index = base2index(c);
 				if (index == UNKNOWN_BASE) {
 					for (index = 0; index < 4; ++index){
@@ -212,7 +216,7 @@ float deepbind::apply_model(deepbind_model_t* model, char* seq, int seq_len)
 }
 
 float deepbind::predict_seq(size_t modelindex, 
-                        char* seq, 
+                        unsigned char* seq, 
                         size_t seqlen,
                         size_t window_size,
                         int average_flag) {
@@ -238,7 +242,7 @@ float deepbind::predict_seq(size_t modelindex,
 }
 
 float deepbind::scan_model(size_t modelindex, 
-                            char* seq, 
+                            unsigned char* seq, 
                             size_t seqlen,
                             size_t window_size,
                             int average_flag) {

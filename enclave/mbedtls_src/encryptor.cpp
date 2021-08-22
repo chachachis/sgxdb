@@ -88,6 +88,7 @@ int ecall_dispatcher::encrypt_block(
 {
     int ret = 0;
 
+    TRACE_ENCLAVE("encrypt_block starting... %i", size);
     ret = mbedtls_aes_crypt_cbc(
         &(m_aescontext->ctx),
         encrypt ? MBEDTLS_AES_ENCRYPT : MBEDTLS_AES_DECRYPT,
@@ -100,6 +101,7 @@ int ecall_dispatcher::encrypt_block(
         TRACE_ENCLAVE("mbedtls_aes_crypt_cbc failed with %d", ret);
     }
 
+    TRACE_ENCLAVE("%s", output_buffer);
     return ret;
 }
 

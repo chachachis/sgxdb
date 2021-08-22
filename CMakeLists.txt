@@ -45,9 +45,9 @@ add_custom_target(sign ALL DEPENDS enclave/enclave.signed)
 
 if ((NOT DEFINED ENV{OE_SIMULATION}) OR (NOT $ENV{OE_SIMULATION}))
   add_custom_target(
-    decrypt-predict
+    decrypt
     DEPENDS file-encryptor_host sign
-    COMMAND file-encryptor_host decrypt-predict ${CMAKE_SOURCE_DIR}/example.ids ${CMAKE_SOURCE_DIR}/example.seq.encrypted
+    COMMAND file-encryptor_host decrypt ${CMAKE_SOURCE_DIR}/example.ids ${CMAKE_SOURCE_DIR}/example.seq.encrypted
             ${CMAKE_BINARY_DIR}/enclave/enclave.signed aPassword)
   add_custom_target(
     encrypt
@@ -63,6 +63,6 @@ endif ()
 
 add_custom_target(
   simulate
-  DEPENDS file-encryptor_host sign
+  DEPENDS file-encryptor_host sign testfile
   COMMAND file-encryptor_host ${CMAKE_SOURCE_DIR}/example.ids ${CMAKE_SOURCE_DIR}/example.seq
           ${CMAKE_BINARY_DIR}/enclave/enclave.signed --simulate)

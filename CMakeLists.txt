@@ -59,6 +59,17 @@ if ((NOT DEFINED ENV{OE_SIMULATION}) OR (NOT $ENV{OE_SIMULATION}))
     DEPENDS file-encryptor_host sign
     COMMAND file-encryptor_host predict ${CMAKE_SOURCE_DIR}/example.ids ${CMAKE_SOURCE_DIR}/example.seq
             ${CMAKE_BINARY_DIR}/enclave/enclave.signed)
+
+  add_custom_target(
+    decryptrnac
+    DEPENDS file-encryptor_host sign
+    COMMAND file-encryptor_host decrypt ${CMAKE_SOURCE_DIR}/data/rnacompete/rna-models.ids ${CMAKE_SOURCE_DIR}/data/rnacompete/rnac.seq.encrypted
+            ${CMAKE_BINARY_DIR}/enclave/enclave.signed rnacpassword)
+  add_custom_target(
+    encryptrnac
+    DEPENDS file-encryptor_host sign
+    COMMAND file-encryptor_host encrypt ${CMAKE_SOURCE_DIR}/data/rnacompete/rnac.seq ${CMAKE_SOURCE_DIR}/data/rnacompete/rnac.seq.encrypted
+            ${CMAKE_BINARY_DIR}/enclave/enclave.signed rnacpassword)
 endif ()
 
 add_custom_target(

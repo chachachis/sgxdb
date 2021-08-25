@@ -92,12 +92,11 @@ int ecall_decryptpredict(unsigned char* inbuff, unsigned char* outbuff, size_t s
 	if (eof)
 	{
 		size = paddingsize;
-		TRACE_ENCLAVE("bytes to write = %i", size);
+		// TRACE_ENCLAVE("bytes to write = %i", size);
 		
 	}
-		
-	// return 0;
-	TRACE_ENCLAVE("outbuff is: \n%s", outbuff);
+
+	// TRACE_ENCLAVE("outbuff is: \n%s", outbuff);
     // parse decrypted outbuff, predict a score for each model
     size_t bytesused = 0;
     size_t seqstart = 0;

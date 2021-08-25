@@ -27,7 +27,7 @@ using namespace std;
 static string operation;
 static oe_enclave_t* enclave = NULL;
 
-const char* DIRECTORY_OF_PARAMETERS = "C:/sgxdb/db/params/";
+const char* DIRECTORY_OF_PARAMETERS = "C:/sgxdb-restore/sgxdb-1/data/params/";
 
 /* create new "deepbind" class in enclave directory,
 add deepbind to cmakelists
@@ -850,7 +850,7 @@ void run_encrypt(const char* input_file, const char* encrypted_file, const char*
 
 }
 
-void run_decrypt_from_encrypt(const char* encrypted_file, const char* decrypted_file, const char* pw) {
+void run_decrypt_from_encrypt(const char* input_file, const char* encrypted_file, const char* decrypted_file, const char* pw) {
     
     int ret = 0;
     // Decrypt a file
@@ -868,16 +868,16 @@ void run_decrypt_from_encrypt(const char* encrypted_file, const char* decrypted_
              << endl;
         exit(-1);
     }
-    cout << "Host: compared file: C:/sgxdb-47947ca91d2ea4953089366adf4158ef2af51346/example.seq"
+    cout << "Host: compared file: " << input_file
          << " to file:" << decrypted_file << endl;
-    ret = compare_2_files("C:/sgxdb-47947ca91d2ea4953089366adf4158ef2af51346/example.seq", decrypted_file);
+    ret = compare_2_files(input_file, decrypted_file);
     if (ret != 0)
     {
-        cerr << "Host: checking failed! C:/sgxdb-47947ca91d2ea4953089366adf4158ef2af51346/example.seq "
+        cerr << "Host: checking failed! " << input_file
              << "'s is supposed to be same as " << decrypted_file << endl;
         
     }
-    cout << "Host: C:/sgxdb-47947ca91d2ea4953089366adf4158ef2af51346/example.seq" << " is equal to " << decrypted_file << endl;
+    cout << "Host: " << input_file << " is equal to " << decrypted_file << endl;
 
 }
 
@@ -899,8 +899,6 @@ void run_decrypt(const char* encrypted_file, const char* decrypted_file, const c
              << endl;
         exit(-1);
     }
-    cout << "Host: compared file: C:/sgxdb-47947ca91d2ea4953089366adf4158ef2af51346/example.seq"
-         << " to file:" << decrypted_file << endl;
     
 }
 
@@ -973,7 +971,7 @@ int main(int argc, const char* argv[])
     
     if (operation.compare("encrypt") == 0) {
         run_encrypt(input_file, output_file, argv[5]);
-        run_decrypt_from_encrypt(output_file, decrypted_file, argv[5]);
+        run_decrypt_from_encrypt(input_file, output_file, decrypted_file, argv[5]);
         return 0;
     }
 

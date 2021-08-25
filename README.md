@@ -1,5 +1,10 @@
 # The File-Encryptor Sample
 
+Before the first run, set OE config file path
+```c
+set CMAKE_PREFIX_PATH=%CMAKE_PREFIX_PATH%;C:\openenclave\lib\openenclave\cmake
+```
+
 To run:
 ```c
 mkdir build
@@ -8,28 +13,8 @@ cmake .. -G Ninja -DNUGET_PACKAGE_PATH=C:\oe_prereqs
 ninja
 ```
 
-OE SDK comes with a default crypto support library that supports a [subset of the open sources mbedTLS](https://github.com/openenclave/openenclave/blob/master/docs/MbedtlsSupport.md) library.
-This sample demonstrates how to perform simple file cryptographic operations inside an enclave using mbedTLS library.
-
-It has the following properties:
-
-- Written in C++
-- Show how to encrypt and decrypt data inside an enclave
-- Show how to derive a key from a password string using [PBKDF2](https://en.wikipedia.org/wiki/PBKDF2)
-- Use AES mbedTLS API to perform encryption and decryption
-- Use the following OE APIs
-  - mbedtls_aes_setkey_*
-  - mbedtls_aes_crypt_cbc
-  - mbedtls_pkcs5_pbkdf2_hmac
-  - mbedtls_ctr_drbg_random
-  - mbedtls_entropy_*
-  - mbedtls_ctr_drbg_*
-  - mbedtls_sha256_*
-- Also runs in OE simulation mode
-
 ## Host application
 
-This sample is relatively straightforward, It's all about the use of the mbedTLS library.
 
 ![Sample components diagram](diagram.png)
 

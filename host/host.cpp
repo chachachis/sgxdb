@@ -27,18 +27,11 @@ using namespace std;
 static string operation;
 static oe_enclave_t* enclave = NULL;
 
-const char* DIRECTORY_OF_PARAMETERS = "C:/sgxdb-restore/sgxdb-1/data/params/";
+const char* DIRECTORY_OF_PARAMETERS = "../data/params/";
 
 /* create new "deepbind" class in enclave directory,
 add deepbind to cmakelists
-
-deepbind code:
-1. check + parse command line for file names
-2. malloc for model_id* 
-
  */
-
-// host helper functions
 
 void hcall_printscores(float* scores, size_t modelcount) {
     for (size_t i = 0; i < modelcount; i++) {
@@ -629,7 +622,6 @@ int decrypt_file_to_enclave(
     }
     requested_read_size =
         bytes_left > MAX_SEQ_SIZE ? MAX_SEQ_SIZE : bytes_left;
-    // cout << "Host: start decrypting" << endl;
 
     // It loops through DATA_BLOCK_SIZE blocks one at a time then followed by
     // processing the last remaining multiple of CIPHER_BLOCK_SIZE blocks. This
@@ -640,23 +632,10 @@ int decrypt_file_to_enclave(
              r_buffer, sizeof(unsigned char), requested_read_size, src_file)) &&
         bytes_read > 0)
     {
-
-
         bytes_to_write = bytes_read;
         // The data size is always padded to align with CIPHER_BLOCK_SIZE
         // during encryption. Therefore, remove the padding (if any) from the
         // last block during decryption.
-        
-        /*
-        cout << "bytes to write = " << bytes_to_write << endl;
-        if (!encrypt && bytes_left <= DATA_BLOCK_SIZE)
-        {
-            bytes_to_write = header.file_data_size % DATA_BLOCK_SIZE;
-            cout << "bytes to write = " << bytes_to_write << endl;
-            bytes_to_write = bytes_to_write > 0 ? bytes_to_write : bytes_read;
-            cout << "bytes to write = " << bytes_to_write << endl;
-        }
-        */
 
         // cout << "bytes to write = " << bytes_to_write << endl;
         bytes_left -= requested_read_size;

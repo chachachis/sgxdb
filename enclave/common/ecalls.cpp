@@ -151,16 +151,16 @@ int ecall_decryptpredict(unsigned char* inbuff, unsigned char* outbuff, size_t s
     if (eof && seqdetected) {
         // score remaining sequence, print and return
         // Predict and print scores
-		TRACE_ENCLAVE("eof true, predict rest of scores");
-		TRACE_ENCLAVE("seq = %s", outbuff+seqstart);
-		TRACE_ENCLAVE("seqstart, size = %i, %i", seqstart, size);
+		// TRACE_ENCLAVE("eof true, predict rest of scores");
+		// TRACE_ENCLAVE("seq = %s", outbuff+seqstart);
+		// TRACE_ENCLAVE("seqstart, size = %i, %i", seqstart, size);
         size_t modelcount = dbmodel.getModelCount();
         float score;
         vector<float> scores;
         for (size_t i = 0; i < modelcount; i++) {
             score = ecall_scanmodel(i, outbuff+seqstart, seqlen, 0, 0);
             scores.push_back(score);
-			TRACE_ENCLAVE("score %f", score);
+			// TRACE_ENCLAVE("score %f", score);
         }
         float* scoresarray = &scores[0];
         oe_result_t result;
@@ -172,7 +172,7 @@ int ecall_decryptpredict(unsigned char* inbuff, unsigned char* outbuff, size_t s
         
     }
     // return number of bytes unused given not end of encrypted file
-    // return (int) seqptr;
-	return 0;
+    return (int)seqlen;
+	// return 0;
 	
 }

@@ -25,14 +25,14 @@ int ecall_dispatcher::initialize(
     encryption_header_t* header)
 {
     int ret = 0;
-    TRACE_ENCLAVE(
-        "ecall_dispatcher::initialize : %s request",
-        encrypt ? "encrypting" : "decrypting");
+    //TRACE_ENCLAVE(
+        // "ecall_dispatcher::initialize : %s request",
+        // encrypt ? "encrypting" : "decrypting");
 
     if (header == nullptr)
     {
-        TRACE_ENCLAVE("initialize() failed as nullptr was passed in place of "
-                      "(encryption_header_t *)");
+        //TRACE_ENCLAVE("initialize() failed as nullptr was passed in place of "
+                    //   "(encryption_header_t *)");
         goto exit;
     }
 
@@ -45,7 +45,7 @@ int ecall_dispatcher::initialize(
     ret = process_encryption_header(header);
     if (ret != 0)
     {
-        TRACE_ENCLAVE("process_encryption_header failed with %d", ret);
+        //TRACE_ENCLAVE("process_encryption_header failed with %d", ret);
         goto exit;
     }
 
@@ -54,7 +54,7 @@ int ecall_dispatcher::initialize(
     if (m_aescontext == nullptr)
     {
         ret = 1;
-        TRACE_ENCLAVE("allocate m_aescontext failed with %d", ret);
+        //TRACE_ENCLAVE("allocate m_aescontext failed with %d", ret);
         goto exit;
     }
 
@@ -70,7 +70,7 @@ int ecall_dispatcher::initialize(
 
     if (ret != 0)
     {
-        TRACE_ENCLAVE("mbedtls_aes_setkey_dec failed with %d", ret);
+        //TRACE_ENCLAVE("mbedtls_aes_setkey_dec failed with %d", ret);
         goto exit;
     }
 
@@ -88,7 +88,7 @@ int ecall_dispatcher::encrypt_block(
 {
     int ret = 0;
 
-    // TRACE_ENCLAVE("encrypt_block starting... %i", size);
+    // //TRACE_ENCLAVE("encrypt_block starting... %i", size);
     ret = mbedtls_aes_crypt_cbc(
         &(m_aescontext->ctx),
         encrypt ? MBEDTLS_AES_ENCRYPT : MBEDTLS_AES_DECRYPT,
@@ -98,7 +98,7 @@ int ecall_dispatcher::encrypt_block(
         output_buffer);
     if (ret != 0)
     {
-        TRACE_ENCLAVE("mbedtls_aes_crypt_cbc failed with %d", ret);
+        //TRACE_ENCLAVE("mbedtls_aes_crypt_cbc failed with %d", ret);
     }
     return ret;
 }
@@ -113,5 +113,5 @@ void ecall_dispatcher::close()
 
     // free aes context
     mbedtls_aes_free(&(m_aescontext->ctx));
-    TRACE_ENCLAVE("ecall_dispatcher::close");
+    //TRACE_ENCLAVE("ecall_dispatcher::close");
 }

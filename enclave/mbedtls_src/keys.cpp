@@ -164,8 +164,8 @@ int ecall_dispatcher::cipher_encryption_key(
     (void)output_data_size;
     mbedtls_aes_context aescontext;
 
-    TRACE_ENCLAVE(
-        "cipher_encryption_key: %s", encrypt ? "encrypting" : "decrypting");
+    // TRACE_ENCLAVE(
+    //     "cipher_encryption_key: %s", encrypt ? "encrypting" : "decrypting");
 
     // init context
     mbedtls_aes_init(&aescontext);
@@ -183,7 +183,7 @@ int ecall_dispatcher::cipher_encryption_key(
     }
     if (ret != 0)
     {
-        TRACE_ENCLAVE("mbedtls_aes_setkey_enc/dec failed with %d", ret);
+        // TRACE_ENCLAVE("mbedtls_aes_setkey_enc/dec failed with %d", ret);
         goto exit;
     }
 
@@ -196,12 +196,12 @@ int ecall_dispatcher::cipher_encryption_key(
         output_data);
     if (ret != 0)
     {
-        TRACE_ENCLAVE("mbedtls_aes_crypt_cbc failed with %d", ret);
+        // TRACE_ENCLAVE("mbedtls_aes_crypt_cbc failed with %d", ret);
     }
 exit:
     // free aes context
     mbedtls_aes_free(&aescontext);
-    TRACE_ENCLAVE("ecall_dispatcher::cipher_encryption_key");
+    // TRACE_ENCLAVE("ecall_dispatcher::cipher_encryption_key");
     return ret;
 }
 
@@ -237,8 +237,8 @@ int ecall_dispatcher::prepare_encryption_header(
 
     if (header == nullptr)
     {
-        TRACE_ENCLAVE("prepare_encryption_header() failed with null argument"
-                      " for encryption_header_t*");
+        // TRACE_ENCLAVE("prepare_encryption_header() failed with null argument"
+        //               " for encryption_header_t*");
         goto exit;
     }
 
@@ -254,7 +254,7 @@ int ecall_dispatcher::prepare_encryption_header(
         strlen(seed));
     if (ret != 0)
     {
-        TRACE_ENCLAVE("mbedtls_ctr_drbg_seed() failed with -0x%04x", -ret);
+        // TRACE_ENCLAVE("mbedtls_ctr_drbg_seed() failed with -0x%04x", -ret);
         goto exit;
     }
 
@@ -262,39 +262,39 @@ int ecall_dispatcher::prepare_encryption_header(
     ret = mbedtls_ctr_drbg_random(&ctr_drbg, salt, sizeof(salt));
     if (ret != 0)
     {
-        TRACE_ENCLAVE("mbedtls_ctr_drbg_random() failed with -0x%04x", -ret);
+        // TRACE_ENCLAVE("mbedtls_ctr_drbg_random() failed with -0x%04x", -ret);
         goto exit;
     }
     memcpy(header->salt, salt, sizeof(salt));
 
-    TRACE_ENCLAVE("prepare_encryption_header");
+    // TRACE_ENCLAVE("prepare_encryption_header");
     // derive a key from the password using PBDKF2
     ret = generate_password_key(
         password.c_str(), salt, password_key, sizeof(password_key));
     if (ret != 0)
     {
-        TRACE_ENCLAVE("password_key");
+        // TRACE_ENCLAVE("password_key");
         for (unsigned int i = 0; i < sizeof(password_key); i++)
-            TRACE_ENCLAVE(
-                "password_key[%d] =0x%02x", i, (unsigned int)(password_key[i]));
+            // TRACE_ENCLAVE(
+            //     "password_key[%d] =0x%02x", i, (unsigned int)(password_key[i]));
         goto exit;
     }
 
     // produce a encryption key
-    TRACE_ENCLAVE("produce a encryption key");
+    // TRACE_ENCLAVE("produce a encryption key");
     ret = generate_encryption_key(
         (unsigned char*)m_encryption_key, ENCRYPTION_KEY_SIZE_IN_BYTES);
     if (ret != 0)
     {
-        TRACE_ENCLAVE("Enclave: m_encryption_key");
+        // TRACE_ENCLAVE("Enclave: m_encryption_key");
         for (unsigned int i = 0; i < ENCRYPTION_KEY_SIZE_IN_BYTES; i++)
-            TRACE_ENCLAVE(
-                "m_encryption_key[%d] =0x%02x", i, m_encryption_key[i]);
+            // TRACE_ENCLAVE(
+            //     "m_encryption_key[%d] =0x%02x", i, m_encryption_key[i]);
         goto exit;
     }
 
     // generate a digest for the password
-    TRACE_ENCLAVE("generate a digest for the password");
+    // TRACE_ENCLAVE("generate a digest for the password");
     ret = Sha256((const uint8_t*)password.c_str(), password.length(), digest);
     if (ret)
     {
@@ -305,7 +305,7 @@ int ecall_dispatcher::prepare_encryption_header(
     memcpy(header->digest, digest, sizeof(digest));
 
     // encrypt the encryption key with a password key
-    TRACE_ENCLAVE("encrypt the encryption key with a psswd key");
+    // TRACE_ENCLAVE("encrypt the encryption key with a psswd key");
     ret = cipher_encryption_key(
         ENCRYPT_OPERATION,
         m_encryption_key,
@@ -317,11 +317,11 @@ int ecall_dispatcher::prepare_encryption_header(
         sizeof(encrypted_key));
     if (ret != 0)
     {
-        TRACE_ENCLAVE("EncryptEncryptionKey failed with [%d]", ret);
+        // TRACE_ENCLAVE("EncryptEncryptionKey failed with [%d]", ret);
         goto exit;
     }
     memcpy(header->encrypted_key, encrypted_key, sizeof(encrypted_key));
-    TRACE_ENCLAVE("Done with prepare_encryption_header successfully.");
+    // TRACE_ENCLAVE("Done with prepare_encryption_header successfully.");
 exit:
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
@@ -340,8 +340,8 @@ int ecall_dispatcher::parse_encryption_header(
     int ret = 0;
     if (header == nullptr)
     {
-        TRACE_ENCLAVE("parse_encryption_header() failed with a null argument"
-                      " for encryption_header_t*");
+        // TRACE_ENCLAVE("parse_encryption_header() failed with a null argument"
+        //               " for encryption_header_t*");
         goto exit;
     }
 
@@ -354,13 +354,13 @@ int ecall_dispatcher::parse_encryption_header(
         Sha256((const uint8_t*)m_password.c_str(), m_password.length(), digest);
     if (ret)
     {
-        TRACE_ENCLAVE("Sha256 failed with %d", ret);
+        // TRACE_ENCLAVE("Sha256 failed with %d", ret);
         goto exit;
     }
 
     if (memcmp(header->digest, digest, sizeof(digest)) != 0)
     {
-        TRACE_ENCLAVE("incorrect password");
+        // TRACE_ENCLAVE("incorrect password");
         ret = 1;
         goto exit;
     }
@@ -372,7 +372,7 @@ int ecall_dispatcher::parse_encryption_header(
         password.c_str(), salt, password_key, sizeof(password_key));
     if (ret != 0)
     {
-        TRACE_ENCLAVE("generate_password_key failed with %d", ret);
+        // TRACE_ENCLAVE("generate_password_key failed with %d", ret);
         goto exit;
     }
 
@@ -388,10 +388,10 @@ int ecall_dispatcher::parse_encryption_header(
         ENCRYPTION_KEY_SIZE_IN_BYTES);
     if (ret != 0)
     {
-        TRACE_ENCLAVE("Enclave: m_encryption_key");
+        // TRACE_ENCLAVE("Enclave: m_encryption_key");
         for (unsigned int i = 0; i < ENCRYPTION_KEY_SIZE_IN_BYTES; i++)
-            TRACE_ENCLAVE(
-                "m_encryption_key[%d] =0x%02x", i, m_encryption_key[i]);
+            // TRACE_ENCLAVE(
+            //     "m_encryption_key[%d] =0x%02x", i, m_encryption_key[i]);
         goto exit;
     }
 
@@ -405,8 +405,8 @@ int ecall_dispatcher::process_encryption_header(encryption_header_t* header)
 
     if (header == nullptr)
     {
-        TRACE_ENCLAVE("process_encryption_header() failed with a null argument"
-                      " for encryption_header_t*");
+        // TRACE_ENCLAVE("process_encryption_header() failed with a null argument"
+                    //   " for encryption_header_t*");
         goto exit;
     }
 
@@ -425,7 +425,7 @@ int ecall_dispatcher::process_encryption_header(encryption_header_t* header)
         ret = prepare_encryption_header(m_header, m_password);
         if (ret != 0)
         {
-            TRACE_ENCLAVE("prepare_encryption_header failed with %d", ret);
+            // TRACE_ENCLAVE("prepare_encryption_header failed with %d", ret);
             goto exit;
         }
         memcpy(header, m_header, sizeof(encryption_header_t));
@@ -435,7 +435,7 @@ int ecall_dispatcher::process_encryption_header(encryption_header_t* header)
         ret = parse_encryption_header(m_header, m_password);
         if (ret != 0)
         {
-            TRACE_ENCLAVE("parse_encryption_header failed with %d", ret);
+            // TRACE_ENCLAVE("parse_encryption_header failed with %d", ret);
             goto exit;
         }
     }

@@ -13,16 +13,7 @@ class deepbind {
     vector<deepbind_model_t> models;
     char base2comp[256];
 
-    public:
-    deepbind();
-    void addModelID(model_id_t modelid);
-    model_id_t getModelID(size_t index);
-    void addModelParams(deepbind_model_t model);
-    int base2index(unsigned char c);
-    deepbind_model_t getModel(size_t index);
-    size_t getModelCount();
 
-    void init_base2comp_table();
     void reverse_complement(unsigned char* seq, size_t seqlen);
     int get_num_hidden1(deepbind_model_t* model);
     int get_num_hidden2(deepbind_model_t* model);
@@ -34,6 +25,17 @@ class deepbind {
                         size_t seqlen,
                         size_t window_size,
                         int average_flag);
+
+    public:
+    deepbind();
+    void addModelID(model_id_t modelid);
+    model_id_t getModelID(size_t index);
+    void addModelParams(deepbind_model_t model);
+    int base2index(unsigned char c);
+    deepbind_model_t getModel(size_t index);
+    size_t getModelCount();
+
+    void init_base2comp_table();
     float scan_model(size_t modelindex, 
                             unsigned char* seq, 
                             size_t seqlen,

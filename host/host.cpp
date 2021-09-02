@@ -45,8 +45,11 @@ void hcall_printscores(float* scores, size_t modelcount) {
 }
 
 void printusage(const char* prog) {
-    cerr << "Usage: " << prog 
-        << " model-ids-file sequences-file enclave_image_path [ --simulate  ]" << endl;
+    cerr << "Usage: use one of the following commands with the specified arguments" << endl;
+    cerr << prog << " encrypt input-file dest-file enclave-image-path password" << endl;
+    cerr << prog << " decrypt ids-file encrypted-seq-file enclave-image-path password" << endl;
+    cerr << prog << " predict ids-file seq-file enclave-image-path" << endl;
+    exit(-1);
 }
 
 void trim_trailing_whitespace(char* str)
@@ -914,8 +917,6 @@ int main(int argc, const char* argv[])
 {
     oe_result_t result;
     int ret = 0;
-    
-    // const char* encrypted_file = "./out.encrypted";
      
     uint32_t flags = OE_ENCLAVE_FLAG_DEBUG;
 
@@ -926,6 +927,9 @@ int main(int argc, const char* argv[])
 
     // Check arguments from command line
     cout << "Host: enter main" << endl;
+    if (argc < 2) {
+        printusage(argv[0]);
+    }
     operation = string(argv[1]);
     
     if (operation.compare("decrypt") == 0 || operation.compare("encrypt") == 0) {

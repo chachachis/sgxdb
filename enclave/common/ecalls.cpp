@@ -85,8 +85,8 @@ float ecall_scanmodel(size_t modelindex,
 	return dbmodel.scan_model(modelindex, seq, seqlen, window_size, average_flag);
 }
 
-int ecall_decryptpredict(unsigned char* inbuff, unsigned char* outbuff, size_t size, bool eof, size_t paddingsize) {
-
+int ecall_decryptpredict(unsigned char* inbuff, size_t size, bool eof, size_t paddingsize) {
+    unsigned char outbuff[MAX_SEQ_SIZE];
 	dispatcher.encrypt_block(false, inbuff, outbuff, size);
 	
 	if (eof)

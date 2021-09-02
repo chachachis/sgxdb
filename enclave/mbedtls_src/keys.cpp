@@ -59,7 +59,7 @@ int ecall_dispatcher::generate_password_key(
     int ret = 0;
     mbedtls_md_init(&sha_ctx);
 
-    TRACE_ENCLAVE("generate_password_key");
+    // TRACE_ENCLAVE("generate_password_key");
 
     memset(key, 0, key_size);
     info_sha = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
@@ -96,7 +96,7 @@ int ecall_dispatcher::generate_password_key(
         TRACE_ENCLAVE("mbedtls_pkcs5_pbkdf2_hmac failed with -0x%04x", -ret);
         goto exit;
     }
-    TRACE_ENCLAVE("Key based on password successfully generated");
+    // TRACE_ENCLAVE("Key based on password successfully generated");
 exit:
     mbedtls_md_free(&sha_ctx);
     return ret;

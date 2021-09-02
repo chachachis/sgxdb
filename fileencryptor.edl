@@ -33,7 +33,6 @@ enclave {
         
         
          public int ecall_decryptpredict([in, count=size] unsigned char* inbuff,
-                                        [in, count=size] unsigned char* outbuff,
                                          size_t size,
                                          bool eof,
                                          size_t paddingsize);

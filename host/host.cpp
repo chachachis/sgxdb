@@ -26,6 +26,7 @@ using namespace std;
 
 static string operation;
 static oe_enclave_t* enclave = NULL;
+static int modelcount = 0;
 
 const char* DIRECTORY_OF_PARAMETERS = "../data/params/";
 
@@ -392,9 +393,9 @@ int encrypt_file(
         else
             padded_byte_count = CIPHER_BLOCK_SIZE - leftover_bytes;
 
-        cout << "Host: Working the last block" << endl;
-        cout << "Host: padded_byte_count " << padded_byte_count << endl;
-        cout << "Host: leftover_bytes " << leftover_bytes << endl;
+        // cout << "Host: Working the last block" << endl;
+        // cout << "Host: padded_byte_count " << padded_byte_count << endl;
+        // cout << "Host: leftover_bytes " << leftover_bytes << endl;
 
         bytes_read = fread(
             plaintext_padding_buf,
@@ -609,7 +610,7 @@ int decrypt_file_to_enclave(
 
     leftover_bytes = src_data_size % CIPHER_BLOCK_SIZE;
 
-    cout << "Host: leftover_bytes " << leftover_bytes << endl;
+    // cout << "Host: leftover_bytes " << leftover_bytes << endl;
 
     // Encrypt each block in the source file and write to the dest_file. Process
     // all the blocks except the last one if its size is not a multiple of
@@ -640,7 +641,7 @@ int decrypt_file_to_enclave(
         // cout << "bytes to write = " << bytes_to_write << endl;
         bytes_left -= requested_read_size;
         size_t paddingsize = header.file_data_size % DATA_BLOCK_SIZE;
-        result = ecall_decryptpredict(enclave, &ret, r_buffer, w_buffer, bytes_to_write, bytes_left==0, paddingsize);
+        result = ecall_decryptpredict(enclave, &ret, r_buffer, bytes_to_write, bytes_left==0, paddingsize);
         // cout << "result from ecall_decryptpredict = " << result << endl;
 
         if (bytes_left == 0)
@@ -714,7 +715,7 @@ deepbind_model_t* load_model(model_id_t id)
 
 /* Loads model parameters to deepbind model in enclave.
     Also prints headers on stdout.  */
-void loadmodelparams(int modelcount) {
+void loadmodelparams() {
     model_id_t modelid;
     deepbind_model_t* model;
     oe_result_t result;
@@ -730,11 +731,21 @@ void loadmodelparams(int modelcount) {
             exit(-1);
         }
         
+        
+    }
+}
+
+void printmodelids() {
+    oe_result_t result;
+    model_id_t id;
+    for (size_t i = 0; i < static_cast<size_t>(modelcount); i++) {
+        result = ecall_getdbmodelid(enclave, &id, i);
         if (i > 0) {
             fputc('\t', stdout);
         }
-        fprintf(stdout, "D%05d.%03d", modelid.major, modelid.minor);
+        fprintf(stdout, "D%05d.%03d", id.major, id.minor);
     }
+    
     fputc('\n', stdout);
 }
 
@@ -863,10 +874,13 @@ void run_decrypt_from_encrypt(const char* input_file, const char* encrypted_file
 void run_decrypt(const char* encrypted_file, const char* decrypted_file, const char* pw) {
 
     int ret = 0;
+    loadmodelparams();
+
     // Decrypt a file
     cout << "Host: decrypting file:" << encrypted_file
          << " to file:" << decrypted_file << endl;
 
+    printmodelids();
     ret = decrypt_file_to_enclave(
         DECRYPT_OPERATION,
         pw,
@@ -884,12 +898,12 @@ void run_decrypt(const char* encrypted_file, const char* decrypted_file, const c
 void run_predict(const char* modelfile, const char* seqfile) {
      // Parse arguments and store model-ids-file in enclave's deepbind model
     
-    int modelcount = loadmodelids(modelfile);
+    modelcount = loadmodelids(modelfile);
     model_id_t modelid;
     oe_result_t getidresult;
 
-    loadmodelparams(modelcount);
-
+    loadmodelparams();
+    printmodelids();
     // Parse sequences from sequences-file and predict for each in enclave
     predictseqs(seqfile, modelcount);
 
@@ -955,8 +969,7 @@ int main(int argc, const char* argv[])
     }
 
     if (operation.compare("decrypt") == 0) {
-        int modelcount = loadmodelids(model_file);
-        loadmodelparams(modelcount);
+        modelcount = loadmodelids(model_file);
         run_decrypt(encrypted_file, decrypted_file, argv[5]);
         return 0;
     }

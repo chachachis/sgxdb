@@ -21,7 +21,7 @@ To run, call any of the custom ninja commands (encrypt, decrypt, predict) to run
 mkdir build
 cd build
 cmake .. -G Ninja -DNUGET_PACKAGE_PATH=C:\oe_prereqs
-ninja (command)
+ninja encrypt
 ```
 
 Alternatively, specify your own command line inputs using the following format:

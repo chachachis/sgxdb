@@ -1,6 +1,9 @@
 # Secure Analysis of Genetic Data using Intel SGX
 Submitted by Christina Chin in partial fulfillment of the requirements for the MSc Degree in Computing Science of Imperial College, September 2021.
 
+The GitHub repository for this archive can be found online at the following link:
+[https://github.com/chachachis/sgxdb/blob/main/README.md](https://github.com/chachachis/sgxdb/blob/main/README.md)
+
 ## System Requirements
 A x86-64 machine with system support for SGX1 is required. Note that SGX must be both supported and enabled from the system BIOS settings. Detailed instructions can be found in the [Open Enclave documentation](https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/install_oe_sdk-Windows.md). This repository was built using the the Microsoft C++ (MSVC) C and C++ compilers downloaded using Microsoft Visual Studio Build Tools 2019. Using other C++ compilers may lead to compiler errors.
 

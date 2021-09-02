@@ -107,7 +107,7 @@ int ecall_decryptpredict(unsigned char* inbuff, size_t size, bool eof, size_t pa
     while (bytesused < size) {
 		// TRACE_ENCLAVE("outbuff[bytesused] = %c", outbuff[bytesused]);
         if (outbuff[bytesused] != '\n') {
-            if (outbuff[bytesused] == ' ' || outbuff[bytesused] == '\t' || outbuff[bytesused] == '\r') {
+            if (dbmodel.base2index(outbuff[bytesused]) == INVALID_BASE) {
                 // whitespace - ignore
                 bytesused++;
             } else {

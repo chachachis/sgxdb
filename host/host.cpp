@@ -41,7 +41,7 @@ void hcall_printscores(float* scores, size_t modelcount) {
         }
         fprintf(stdout, "%f", double(scores[i]));
     }
-    fputc('\n', stdout);
+    cout << endl;
 }
 
 void printusage(const char* prog) {
@@ -641,11 +641,17 @@ int decrypt_file_to_enclave(
         // during encryption. Therefore, remove the padding (if any) from the
         // last block during decryption.
 
-        // cout << "bytes to write = " << bytes_to_write << endl;
+        //cout << "bytes to write = " << bytes_to_write << endl;
         bytes_left -= requested_read_size;
         size_t paddingsize = header.file_data_size % DATA_BLOCK_SIZE;
         result = ecall_decryptpredict(enclave, &ret, r_buffer, bytes_to_write, bytes_left==0, paddingsize);
-        // cout << "result from ecall_decryptpredict = " << result << endl;
+        // cout << "result from ecall_decryptpredict = " << ret << endl;
+
+        // if (ret > 0) {
+        //     int offset = bytes_left;
+        //     fseek(src_file, offset, SEEK_SET);
+        //     bytes_left += ret;
+        // }
 
         if (bytes_left == 0)
             break;
